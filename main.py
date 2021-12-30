@@ -1,4 +1,4 @@
-from flask import Flask, g, request, render_template, flash, redirect, url_for
+from flask import Flask, g, request, render_template, flash, redirect, url_for, abort
 import sqlite3
 import os
 
@@ -18,6 +18,15 @@ def get_db():
   if not hasattr(g, 'sqlite3'):
     g.sqlite_db = connect_db()
   return g.sqlite_db
+
+
+def get_user(user_id):
+  db = get_db()
+  user = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
+  db.close()
+  if user is None:
+    abort(404)
+  return user
 
 
 @app.route('/')
@@ -44,7 +53,37 @@ def add_user():
         db.commit()
         db.close()
         return redirect(url_for('list_users'))
-    return render_template('add.html')
+    return render_template('form.html')
+
+
+@app.route('/delete/<id>', methods=['GET','POST'])
+def delete_user(id):
+    db = get_db()
+    user = get_user(id)
+    db.execute('DELETE FROM users WHERE id = ' +str(user['id']))
+    db.commit()
+    db.close()
+    return redirect(url_for('list_users'))
+
+
+@app.route('/edit/<id>', methods=('GET', 'POST'))
+def edit_user(id):
+    user = get_user(id)
+    if request.method == 'POST':
+        name = request.form['name']
+        email = request.form['email']
+
+        if not name:
+            flash('Name is required!')
+        if not email:
+            flash('Email is required!')
+        else:
+            db = get_db()
+            db.execute('UPDATE users SET name = ?, email = ? WHERE id = ?', (name,email,str(user['id'])))
+            db.commit()
+            db.close()
+            return redirect(url_for('list_users'))
+    return render_template('form.html')
 
 
 if __name__ == '__main__':
