@@ -8,4 +8,5 @@ RUN pip install -r requirements.txt
 COPY . .
 
 ENTRYPOINT ["python3"]
+CMD ["init_db.py"]
 CMD ["main.py"]
